@@ -34,7 +34,6 @@ def main():
         print_stderr("error: must provide path to dropbear executable")
         return 0
 
-    print_stderr("info: writing port to:", portfile)
     print_stderr("info: dropbear executable:", executable)
 
     sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -43,15 +42,20 @@ def main():
     print_stderr("info: allocated port:", allocated)
 
     sock.listen()
-    print_stderr("info: listening for connections")
 
+    # Do not relocate this file write.
+    # Having it written after listen() offers a greater guarantee to the
+    # waiting program that the assister has successfully started.
     if portfile != "":
+        print_stderr("info: writing port to:", portfile)
         try:
             with open(portfile, "w") as f:
                 f.write(str(allocated)+"\n")
         except Exception:
             print_stderr("error: could not write port to portfile")
             raise
+
+    print_stderr("info: listening for connections")
 
     while True:
         sock_client, addr = sock.accept()
