@@ -57,7 +57,11 @@
  * the clearenv() function */
 #define ENV_SIZE 100
 
-#define MAX_CMD_LEN 9000 /* max length of a command */
+/* 
+ * Increase the maximum command length as compared to upstream because
+ * some HPC applications pass _GINORMOUS_ command lengths.
+ */
+#define MAX_CMD_LEN 90000 /* max length of a command */
 #define MAX_TERM_LEN 200 /* max length of TERM name */
 
 #define MAX_HOST_LEN 254 /* max hostname len for tcp fwding */
