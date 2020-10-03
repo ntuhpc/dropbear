@@ -932,52 +932,32 @@ static void execchild(const void *user_data) {
 	seedrandom();
 #endif
 
-	/* clear environment */
-	/* if we're debugging using valgrind etc, we need to keep the LD_PRELOAD
-	 * etc. This is hazardous, so should only be used for debugging. */
-#ifndef DEBUG_VALGRIND
-#ifdef HAVE_CLEARENV
-	clearenv();
-#else /* don't HAVE_CLEARENV */
-	/* Yay for posix. */
-	if (environ) {
-		environ[0] = NULL;
-	}
-#endif /* HAVE_CLEARENV */
-#endif /* DEBUG_VALGRIND */
+	/* Don't clear the environment so the user shell / command inherits
+     * the server's environment.
+	 * 
+	 * We do this because some containers initialize the environment
+	 * at container start and recreating that process for every shell
+	 * is potentially container-specific or requires a bunch of research.
+	 * 
+	 * It's too much work for too little gain and we don't really benefit
+	 * from the increased security by clearing the environment given that
+	 * only the same user will login, so remove the source code segment
+	 * responsible for setting up a clean environment.
+	 */
 
 #if DROPBEAR_SVR_MULTIUSER
-	/* We can only change uid/gid as root ... */
-	if (getuid() == 0) {
-
-		if ((setgid(ses.authstate.pw_gid) < 0) ||
-			(initgroups(ses.authstate.pw_name, 
-						ses.authstate.pw_gid) < 0)) {
-			dropbear_exit("Error changing user group");
-		}
-		if (setuid(ses.authstate.pw_uid) < 0) {
-			dropbear_exit("Error changing user");
-		}
-	} else {
-		/* ... but if the daemon is the same uid as the requested uid, we don't
-		 * need to */
-
-		/* XXX - there is a minor issue here, in that if there are multiple
-		 * usernames with the same uid, but differing groups, then the
-		 * differing groups won't be set (as with initgroups()). The solution
-		 * is for the sysadmin not to give out the UID twice */
-		if (getuid() != ses.authstate.pw_uid) {
-			dropbear_exit("Couldn't	change user as non-root");
-		}
+	if (getuid() != ses.authstate.pw_uid) {
+		dropbear_exit("Must login as same UID as SSH daemon");
 	}
 #endif
 
 	/* set env vars */
 	addnewvar("USER", ses.authstate.pw_name);
 	addnewvar("LOGNAME", ses.authstate.pw_name);
-	addnewvar("HOME", ses.authstate.pw_dir);
-	addnewvar("SHELL", get_user_shell());
-	addnewvar("PATH", DEFAULT_PATH);
+	/* Don't reset these variables for the same reason as before */
+	// addnewvar("HOME", ses.authstate.pw_dir);
+	// addnewvar("SHELL", get_user_shell());
+	// addnewvar("PATH", DEFAULT_PATH);
 	if (chansess->term != NULL) {
 		addnewvar("TERM", chansess->term);
 	}
